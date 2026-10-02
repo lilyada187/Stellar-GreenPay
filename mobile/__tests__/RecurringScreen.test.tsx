@@ -28,7 +28,7 @@ import axios from 'axios';
 jest.mock('expo-router', () => ({
   useFocusEffect: (cb: () => void) => {
     // Run synchronously so data loads before the first render.
-    React.useEffect(cb, []);
+    require('react').useEffect(cb, []);
   },
 }));
 
@@ -50,12 +50,29 @@ jest.mock('../utils/recurringDonations', () => {
     createdAt: new Date().toISOString(),
   };
 
+  const mockCancel = jest.fn().mockResolvedValue(undefined);
+
   return {
     loadRecurringDonations: jest.fn().mockResolvedValue([MOCK_DONATION]),
     loadPaymentHistory: jest.fn().mockResolvedValue([]),
-    cancelRecurringDonation: jest.fn().mockResolvedValue(undefined),
+    cancelRecurringDonation: mockCancel,
     createRecurringDonation: jest.fn(),
     saveRecurringDonations: jest.fn(),
+    useRecurringDonations: (options?: any) => {
+      const React = require('react');
+      const [donations, setDonations] = React.useState([MOCK_DONATION]);
+      return {
+        donations,
+        isSyncing: false,
+        error: null,
+        refresh: jest.fn(),
+        create: jest.fn(),
+        cancel: async (id: string) => {
+          await mockCancel(id);
+          setDonations((prev: any[]) => prev.filter((d: any) => d.id !== id));
+        },
+      };
+    },
   };
 });
 
@@ -111,15 +128,15 @@ afterEach(() => {
 
 describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
   test('tapping Cancel shows Alert.alert with the correct interpolated message', async () => {
-    const { getByAccessibilityLabel } = render(<RecurringScreen />);
+    const { getByLabelText } = render(<RecurringScreen />);
 
     // Wait for donation card to appear after async loadRecurringDonations.
     await waitFor(() => {
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation');
+      getByLabelText('Cancel recurring donation to Amazon Reforestation');
     });
 
     fireEvent.press(
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     expect(alertSpy).toHaveBeenCalledWith(
@@ -133,13 +150,13 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
   });
 
   test('pressing "Keep donation" does NOT call cancelRecurringDonation', async () => {
-    const { getByAccessibilityLabel } = render(<RecurringScreen />);
+    const { getByLabelText } = render(<RecurringScreen />);
     await waitFor(() =>
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     fireEvent.press(
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     // Find the "Keep donation" button in the alert and confirm it has no onPress
@@ -157,13 +174,13 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
   });
 
   test('confirming "Cancel donation" calls cancelRecurringDonation with the correct id', async () => {
-    const { getByAccessibilityLabel } = render(<RecurringScreen />);
+    const { getByLabelText } = render(<RecurringScreen />);
     await waitFor(() =>
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     fireEvent.press(
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     const alertCall = alertSpy.mock.calls[0];
@@ -181,15 +198,15 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
   });
 
   test('on success the donation card is removed from the list', async () => {
-    const { getByAccessibilityLabel, queryByAccessibilityLabel } = render(
+    const { getByLabelText, queryByLabelText } = render(
       <RecurringScreen />,
     );
     await waitFor(() =>
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     fireEvent.press(
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     const alertCall = alertSpy.mock.calls[0];
@@ -203,7 +220,7 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
 
     await waitFor(() => {
       expect(
-        queryByAccessibilityLabel(
+        queryByLabelText(
           'Cancel recurring donation to Amazon Reforestation',
         ),
       ).toBeNull();
@@ -213,13 +230,13 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
   test('on failed delete shows an error alert and keeps the card visible', async () => {
     cancelRecurringMock.mockRejectedValueOnce(new Error('Network error'));
 
-    const { getByAccessibilityLabel } = render(<RecurringScreen />);
+    const { getByLabelText } = render(<RecurringScreen />);
     await waitFor(() =>
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     fireEvent.press(
-      getByAccessibilityLabel('Cancel recurring donation to Amazon Reforestation'),
+      getByLabelText('Cancel recurring donation to Amazon Reforestation'),
     );
 
     const confirmationAlertCall = alertSpy.mock.calls[0];
@@ -241,7 +258,7 @@ describe('RecurringScreen — cancel confirmation dialog (#1119)', () => {
 
     // The donation card must still be visible.
     expect(
-      getByAccessibilityLabel(
+      getByLabelText(
         'Cancel recurring donation to Amazon Reforestation',
       ),
     ).toBeTruthy();
