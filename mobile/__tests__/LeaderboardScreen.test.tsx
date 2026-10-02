@@ -94,10 +94,8 @@ describe('LeaderboardScreen component', () => {
       expect(getByText('Donor 1')).toBeTruthy();
     });
 
-    const flatList = UNSAFE_getByType(FlatList);
-
     await act(async () => {
-      flatList.props.onEndReached();
+      UNSAFE_getByType(FlatList).props.onEndReached();
     });
 
     await waitFor(() => {
