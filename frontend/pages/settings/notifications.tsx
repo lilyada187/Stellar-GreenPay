@@ -9,7 +9,12 @@ export default function NotificationSettingsPage() {
 
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("email");
-    if (value) { setEmail(value); void load(value); }
+    if (value) {
+      queueMicrotask(() => {
+        setEmail(value);
+        void load(value);
+      });
+    }
   }, []);
 
   async function load(value = email) {

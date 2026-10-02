@@ -15,6 +15,7 @@ const { server } = require("../services/stellar");
 const donationEvents = require("../services/donationEvents");
 const { enqueueProfileUpdate } = require("../services/profileQueue");
 const { checkAndDeliverMilestones } = require("../services/webhook");
+const { enqueueDonationPushNotification } = require("../services/push");
 const configuredDonationLimit = Number.parseInt(process.env.DONATIONS_RATE_LIMIT_PER_MINUTE || "10", 10);
 const donationLimiter = createRateLimiter(
   Number.isFinite(configuredDonationLimit) && configuredDonationLimit > 0 ? configuredDonationLimit : 10,
@@ -70,10 +71,6 @@ async function recordDonation(req, res, next) {
     const projectResult = await client.query("SELECT id, co2_per_xlm, name, wallet_address FROM projects WHERE id = $1", [projectId]);
     if (!projectResult.rows[0]) { const e = new Error("Project not found"); e.status = 404; throw e; }
     const projectCo2PerXlm = projectResult.rows[0].co2_per_xlm;
-
-    // Determine numeric amount depending on currency
-    const parsedAmount = parseFloat(currency === "XLM" ? amountXLM ?? amount : amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) { const e = new Error("Invalid amount"); e.status = 400; throw e; }
 
     // Deduplicate by tx hash
     const existingResult = await client.query(
@@ -195,10 +192,10 @@ async function recordDonation(req, res, next) {
     if (currency === "XLM") {
       try {
         const referralCheck = await pool.query(
-          `SELECT COUNT(*) as count FROM donations WHERE donor_address = $1`,
+          "SELECT COUNT(*) as count FROM donations WHERE donor_address = $1",
           [donorAddress]
         );
-        const donationCount = parseInt(referralCheck.rows[0]?.count || "0");
+        const donationCount = parseInt(referralCheck.rows[0]?.count || "0", 10);
         
         // If this is the first donation, award referral bonus
         if (donationCount === 1) {
@@ -207,7 +204,7 @@ async function recordDonation(req, res, next) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               referredAddress: donorAddress,
-              donationId: recordedDonation.id,
+              donationId: donationResult.rows[0].id,
               amountXLM: parsedAmount.toString()
             })
           }).catch(err => logger.error("Failed to award referral bonus:", err));

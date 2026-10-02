@@ -12,7 +12,7 @@ const { logAdminAction } = require("../services/audit");
 const { mapProjectRow, mapProjectMilestoneRow, updateWebhook, computeBadges } = require("../services/store");
 const {
   getOnChainProject,
-getProjectDonationEvents,
+  getProjectDonationEvents,
   getRegisteredProjectIdFromTransaction,
   buildSetFundingDeadlineTx,
   CONTRACT_ID,
@@ -325,7 +325,7 @@ router.get("/", async (req, res, next) => {
         category,
         status,
         verified,
-search: search || q,
+        search: search || q,
         sort: sortField,
         limit: pageSize,
         cursor: cursor || null,
@@ -349,7 +349,7 @@ search: search || q,
     if (verified === "true") {
       where.push("verified = true");
     }
-const searchTerm = q || search;
+    const searchTerm = q || search;
     if (searchTerm && typeof searchTerm === "string") {
       values.push(searchTerm.trim());
       where.push(`search_vector @@ websearch_to_tsquery('english', $${values.length})`);
@@ -370,7 +370,7 @@ const searchTerm = q || search;
       values.push(sortValue, id);
       const sortValIdx = values.length - 1;
       const idIdx = values.length;
-where.push(
+      where.push(
         `(${sortField} < $${sortValIdx} OR (${sortField} = $${sortValIdx} AND id < $${idIdx}))`,
       );
     }
@@ -1149,7 +1149,7 @@ router.get("/:id", async (req, res, next) => {
       [req.params.id],
     );
 
-// Funding deadline / auto-refund metadata (may be null if not configured).
+    // Funding deadline / auto-refund metadata (may be null if not configured).
     const fundingDeadline = await fetchFundingDeadline(req.params.id);
 
     // Follower count + optional isFollowing from wallet-only project_follows rows.
@@ -2105,7 +2105,7 @@ module.exports = router;
 // Export internal functions for testing
 if (process.env.NODE_ENV === "test") {
   module.exports.mapCampaignRow = mapCampaignRow;
-module.exports.getUsdcToXlmRate = getUsdcToXlmRate;
+  module.exports.getUsdcToXlmRate = getUsdcToXlmRate;
   module.exports.fetchCampaignsForProject = fetchCampaignsForProject;
   module.exports.mapFundingDeadlineRow = mapFundingDeadlineRow;
   module.exports.fetchFundingDeadline = fetchFundingDeadline;

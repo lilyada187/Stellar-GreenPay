@@ -50,6 +50,7 @@ const router = express.Router();
 const { uploadFile, backendName, UPLOAD_DIR } = require("../services/storage");
 const { generatePresignedPutUrl } = require("../services/s3Presign");
 const { createRateLimiter } = require("../middleware/rateLimiter");
+const moderation = require("../services/moderation");
 const logger = require("../logger");
 
 const uploadRateLimiter = createRateLimiter(20, 15, "uploads"); // 20 uploads per 15 min

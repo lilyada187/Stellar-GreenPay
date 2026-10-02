@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { notifyAdmin, submitProject } from "@/lib/api";
@@ -47,17 +47,25 @@ const IMPACT_METRICS = [
 
 function Field({
   label,
+  htmlFor,
   error,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   error?: string;
   children: React.ReactNode;
 }) {
+  const generatedId = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const id = htmlFor || generatedId;
+  const childWithId = React.isValidElement(children) && !(children.props as any)?.id
+    ? React.cloneElement(children as React.ReactElement<any>, { id })
+    : children;
+
   return (
     <div className="flex flex-col gap-1">
-      <label className="label">{label}</label>
-      {children}
+      <label className="label" htmlFor={id}>{label}</label>
+      {childWithId}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
